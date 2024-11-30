@@ -1,10 +1,12 @@
 use std::path::Path;
 use std::fs;
 use chardet::{detect, charset2encoding};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
 pub struct FileEncoding {
     pub encoding: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bom: Option<&'static str>,
 }
 
