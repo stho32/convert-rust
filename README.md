@@ -6,18 +6,17 @@ This document outlines the requirements for a file encoding detection and conver
 ## Requirements Checklist
 
 ### Purpose and Scope
-- [ ] Create a tool for managing and converting file encodings in Windows/Linux environments
+- [X] Create a tool for managing and converting file encodings in Windows/Linux environments
 - [ ] Support both analysis and conversion of encodings
 - [ ] Focus on command-line usage and automation capabilities
 
 ### Analysis Mode Features
-- [ ] Scan single files for encoding detection
-
-- [ ] Recursively scan directories for encoding detection
-- [ ] Detect presence/absence of BOM (Byte Order Mark)
-- [ ] Display detailed file information including path and detected encoding
-- [ ] Generate statistical summaries of found encodings
-- [ ] Support filtering by file extensions
+- [X] Scan single files for encoding detection
+- [X] Recursively scan directories for encoding detection
+- [X] Detect presence/absence of BOM (Byte Order Mark)
+- [X] Display detailed file information including path and detected encoding
+- [X] Generate statistical summaries of found encodings
+- [X] Support filtering by file extensions
 - [ ] Provide machine-readable output option (JSON/CSV)
 
 ### Conversion Mode Features
