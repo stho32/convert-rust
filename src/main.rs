@@ -3,16 +3,19 @@ mod statistics;
 mod filter;
 mod output;
 mod conversion;
+mod safety;
 
 use clap::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::error::Error;
+use log::{info, error};
 use detection::detect_encoding;
 use statistics::Statistics;
 use filter::FileFilter;
 use output::OutputFormat;
 use conversion::{EncodingConverter, LineEnding};
+use safety::ConversionSafety;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -39,9 +42,17 @@ struct Args {
     #[arg(short = 'l', long, default_value = "unix")]
     line_ending: String,
 
+    /// Create backups before conversion
+    #[arg(short = 'b', long)]
+    create_backup: bool,
+
     /// Output directory for converted files
     #[arg(short = 'o', long)]
     output_dir: Option<String>,
+
+    /// Skip verification of converted files
+    #[arg(short = 's', long)]
+    skip_verification: bool,
 }
 
 fn scan_directory(
@@ -70,22 +81,50 @@ fn convert_files(
     target_encoding: &str,
     line_ending: LineEnding,
     output_dir: &Path,
+    safety: &ConversionSafety,
+    skip_verification: bool,
 ) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(output_dir)?;
+    info!("Starting batch conversion of {} files", files.len());
 
     for (path, name, encoding) in files {
+        info!("Processing file: {}", path.display());
+        
+        // Create backup if enabled
+        let backup_path = safety.create_backup(path)?;
         let output_path = output_dir.join(name);
+
         match EncodingConverter::convert_file(path, &output_path, encoding, target_encoding, line_ending) {
-            Ok(_) => println!("✓ Converted {} to {} with {} line endings", 
-                path.display(), 
-                target_encoding,
-                match line_ending {
-                    LineEnding::Unix => "Unix",
-                    LineEnding::Windows => "Windows",
-                    LineEnding::Keep => "original",
+            Ok(_) => {
+                // Verify conversion unless skipped
+                if !skip_verification {
+                    if let Err(e) = safety.verify_conversion(path, &output_path) {
+                        error!("Verification failed for {}: {}", path.display(), e);
+                        if let Some(backup) = backup_path {
+                            info!("Attempting rollback...");
+                            safety.rollback(path, &backup)?;
+                        }
+                        continue;
+                    }
                 }
-            ),
-            Err(e) => eprintln!("✗ Failed to convert {}: {:?}", path.display(), e),
+
+                info!("✓ Successfully converted {} to {} with {} line endings", 
+                    path.display(), 
+                    target_encoding,
+                    match line_ending {
+                        LineEnding::Unix => "Unix",
+                        LineEnding::Windows => "Windows",
+                        LineEnding::Keep => "original",
+                    }
+                );
+            }
+            Err(e) => {
+                error!("✗ Failed to convert {}: {:?}", path.display(), e);
+                if let Some(backup) = backup_path {
+                    info!("Attempting rollback...");
+                    safety.rollback(path, &backup)?;
+                }
+            }
         }
     }
     Ok(())
@@ -127,6 +166,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                         dir
                     });
 
+                // Initialize safety features with input path as base directory
+                let safety = ConversionSafety::new(path, &output_dir, args.create_backup)?;
+
                 println!("\nConverting files to {} with {} line endings...", 
                     target_encoding,
                     match line_ending {
@@ -135,8 +177,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                         LineEnding::Keep => "original",
                     }
                 );
-                convert_files(&stats.get_files(), &target_encoding, line_ending, &output_dir)?;
-                println!("\nConversion completed. Output directory: {}", output_dir.display());
+
+                if args.skip_verification {
+                    println!("Warning: Verification is disabled. Conversion errors may not be detected.");
+                }
+
+                if args.create_backup {
+                    println!("Backups will be created before conversion.");
+                }
+
+                convert_files(
+                    &stats.get_files(),
+                    &target_encoding,
+                    line_ending,
+                    &output_dir,
+                    &safety,
+                    args.skip_verification
+                )?;
+
+                println!("\nConversion completed.");
+                println!("Output directory: {}", output_dir.display());
+                if let Some(backup_dir) = safety.get_backup_dir() {
+                    println!("Backup directory: {}", backup_dir.display());
+                }
+                println!("Log file: {}", safety.get_log_file().display());
             }
 
             Ok(())
