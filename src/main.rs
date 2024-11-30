@@ -31,23 +31,14 @@ struct Args {
 
 fn scan_directory(
     path: &Path,
-    indent: usize,
     stats: &mut Statistics,
     filter: &FileFilter,
-    format: &OutputFormat,
 ) -> Result<(), Box<dyn Error>> {
     if path.is_dir() {
-        let name = path.file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| path.to_string_lossy().to_string());
-        if matches!(format, OutputFormat::Text) {
-            println!("{}📁 {}", " ".repeat(indent), name);
-        }
-        
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
-            scan_directory(&path, indent + 2, stats, filter, format)?;
+            scan_directory(&path, stats, filter)?;
         }
     } else if filter.should_include(path) {
         let name = path.file_name()
@@ -75,7 +66,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let filter = FileFilter::new(args.extensions);
     let mut stats = Statistics::new();
 
-    match scan_directory(path, 0, &mut stats, &filter, &format) {
+    match scan_directory(path, &mut stats, &filter) {
         Ok(_) => {
             if matches!(format, OutputFormat::Text) {
                 println!("\nDirectory scan completed successfully.");

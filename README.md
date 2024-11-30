@@ -17,7 +17,7 @@ This document outlines the requirements for a file encoding detection and conver
 - [X] Display detailed file information including path and detected encoding
 - [X] Generate statistical summaries of found encodings
 - [X] Support filtering by file extensions
-- [ ] Provide machine-readable output option (JSON/CSV)
+- [X] Provide machine-readable output option (JSON/CSV)
 
 ### Conversion Mode Features
 - [ ] Enable conversion between different encoding types

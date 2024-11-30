@@ -68,9 +68,14 @@ pub fn write_output(report: &ScanReport, format: &OutputFormat) -> Result<(), Bo
 }
 
 fn write_text_output(report: &ScanReport) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Files:");
     for file in &report.files {
         let bom_info = file.encoding.bom.map_or("No BOM".to_string(), |b| format!("BOM: {}", b));
-        println!("📄 {} [{}, {}]", file.name, file.encoding.encoding, bom_info);
+        println!("📄 {} [{}, {}]", 
+            file.path.display(), 
+            file.encoding.encoding, 
+            bom_info
+        );
     }
 
     println!("\n=== Encoding Statistics ===");
