@@ -55,4 +55,10 @@ impl Statistics {
         let report = self.generate_report();
         write_output(&report, format)
     }
+
+    pub fn get_files(&self) -> Vec<(PathBuf, String, FileEncoding)> {
+        self.files.iter()
+            .map(|f| (f.path.clone(), f.name.clone(), f.encoding.clone()))
+            .collect()
+    }
 }
